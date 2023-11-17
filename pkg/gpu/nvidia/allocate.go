@@ -2,13 +2,14 @@ package nvidia
 
 import (
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
 
 	log "github.com/golang/glog"
 	"golang.org/x/net/context"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	pluginapi "k8s.io/kubernetes/pkg/kubelet/apis/deviceplugin/v1beta1"
+	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
 var (
@@ -132,12 +133,14 @@ func (m *NvidiaDevicePlugin) Allocate(ctx context.Context,
 		if err != nil {
 			return buildErrResponse(reqs, podReqGPU), nil
 		}
-		_, err = clientset.CoreV1().Pods(assumePod.Namespace).Patch(assumePod.Name, types.StrategicMergePatchType, patchedAnnotationBytes)
+		_, err = clientset.CoreV1().Pods(assumePod.Namespace).Patch(ctx, assumePod.Name, types.StrategicMergePatchType,
+			patchedAnnotationBytes, metav1.PatchOptions{})
 		if err != nil {
 			// the object has been modified; please apply your changes to the latest version and try again
 			if err.Error() == OptimisticLockErrorMsg {
 				// retry
-				_, err = clientset.CoreV1().Pods(assumePod.Namespace).Patch(assumePod.Name, types.StrategicMergePatchType, patchedAnnotationBytes)
+				_, err = clientset.CoreV1().Pods(assumePod.Namespace).Patch(ctx, assumePod.Name,
+					types.StrategicMergePatchType, patchedAnnotationBytes, metav1.PatchOptions{})
 				if err != nil {
 					log.Warningf("Failed due to %v", err)
 					return buildErrResponse(reqs, podReqGPU), nil

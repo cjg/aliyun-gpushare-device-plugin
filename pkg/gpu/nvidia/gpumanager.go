@@ -2,15 +2,15 @@ package nvidia
 
 import (
 	"fmt"
+	"github.com/NVIDIA/go-nvml/pkg/nvml"
 	"github.com/cjg/aliyun-gpushare-device-plugin/pkg/kubelet/client"
+	log "github.com/golang/glog"
 	"os"
 	"syscall"
 	"time"
 
-	"github.com/NVIDIA/gpu-monitoring-tools/bindings/go/nvml"
 	"github.com/fsnotify/fsnotify"
-	log "github.com/golang/glog"
-	pluginapi "k8s.io/kubernetes/pkg/kubelet/apis/deviceplugin/v1beta1"
+	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
 type sharedGPUManager struct {
@@ -31,9 +31,9 @@ func NewSharedGPUManager(enableMPS, healthCheck, queryKubelet bool, bp MemoryUni
 }
 
 func (ngm *sharedGPUManager) Run() error {
-	log.V(1).Infoln("Loading NVML")
+	log.V(1).Info("Loading NVML")
 
-	if err := nvml.Init(); err != nil {
+	if err := nvml.Init(); err != nvml.SUCCESS {
 		log.V(1).Infof("Failed to initialize NVML: %s.", err)
 		log.V(1).Infof("If this is a GPU node, did you set the docker default runtime to `nvidia`?")
 		select {}

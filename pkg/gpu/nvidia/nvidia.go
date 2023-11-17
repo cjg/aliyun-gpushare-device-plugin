@@ -2,14 +2,11 @@ package nvidia
 
 import (
 	"fmt"
-	"strings"
-
+	"github.com/NVIDIA/go-nvml/pkg/nvml"
 	log "github.com/golang/glog"
-
-	"github.com/NVIDIA/gpu-monitoring-tools/bindings/go/nvml"
-
 	"golang.org/x/net/context"
-	pluginapi "k8s.io/kubernetes/pkg/kubelet/apis/deviceplugin/v1beta1"
+	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+	"strings"
 )
 
 var (
@@ -17,9 +14,9 @@ var (
 	metric    MemoryUnit
 )
 
-func check(err error) {
-	if err != nil {
-		log.Fatalln("Fatal:", err)
+func check(err nvml.Return) {
+	if err != nvml.SUCCESS {
+		log.Fatalln("Fatal: ", nvml.ErrorString(err))
 	}
 }
 
@@ -45,26 +42,24 @@ func getGPUMemory() uint {
 }
 
 func getDeviceCount() uint {
-	n, err := nvml.GetDeviceCount()
+	n, err := nvml.DeviceGetCount()
 	check(err)
-	return n
+	return uint(n)
 }
 
 func getDevices() ([]*pluginapi.Device, map[string]uint) {
-	n, err := nvml.GetDeviceCount()
+	n, err := nvml.DeviceGetCount()
 	check(err)
 
 	var devs []*pluginapi.Device
 	realDevNames := map[string]uint{}
-	for i := uint(0); i < n; i++ {
-		d, err := nvml.NewDevice(i)
+	for i := 0; i < n; i++ {
+		d, err := nvml.DeviceGetHandleByIndex(i)
 		check(err)
 		// realDevNames = append(realDevNames, d.UUID)
-		var id uint
-		log.Infof("Deivce %s's Path is %s", d.UUID, d.Path)
-		_, err = fmt.Sscanf(d.Path, "/dev/nvidia%d", &id)
+		uuid, err := d.GetUUID()
 		check(err)
-		realDevNames[d.UUID] = id
+		realDevNames[uuid] = uint(i)
 		// var KiB uint64 = 1024
 		log.Infof("# device Memory: %d", uint(*d.Memory))
 		if getGPUMemory() == uint(0) {

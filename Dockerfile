@@ -1,11 +1,10 @@
-FROM golang:1.10-stretch as build
+FROM golang:1.21-bookworm as build
 
-WORKDIR /go/src/github.com/AliyunContainerService/gpushare-device-plugin
+RUN mkdir /src
+WORKDIR /src
 COPY . .
 
-RUN export CGO_LDFLAGS_ALLOW='-Wl,--unresolved-symbols=ignore-in-object-files' && \
-    go build -ldflags="-s -w" -o /go/bin/gpushare-device-plugin-v2 cmd/nvidia/main.go
-
+RUN go build -o /go/bin/gpushare-device-plugin-v2 cmd/nvidia/main.go
 RUN go build -o /go/bin/kubectl-inspect-gpushare-v2 cmd/inspect/*.go
 
 FROM debian:bullseye-slim
