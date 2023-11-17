@@ -1,7 +1,7 @@
 package nvidia
 
 import (
-	"github.com/AliyunContainerService/gpushare-device-plugin/pkg/kubelet/client"
+	"github.com/cjg/aliyun-gpushare-device-plugin/pkg/kubelet/client"
 	"net"
 	"os"
 	"path"

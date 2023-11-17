@@ -2,9 +2,9 @@ package nvidia
 
 import (
 	"fmt"
-	"github.com/AliyunContainerService/gpushare-device-plugin/pkg/kubelet/client"
-	"syscall"
+	"github.com/cjg/aliyun-gpushare-device-plugin/pkg/kubelet/client"
 	"os"
+	"syscall"
 	"time"
 
 	"github.com/NVIDIA/gpu-monitoring-tools/bindings/go/nvml"
