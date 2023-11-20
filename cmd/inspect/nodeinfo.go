@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -205,8 +206,8 @@ func hasPendingGPUMemory(nodeInfos []*NodeInfo) (found bool) {
 	return false
 }
 
-func getNodes(nodeName string) ([]v1.Node, error) {
-	node, err := clientset.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+func getNodes(ctx context.Context, nodeName string) ([]v1.Node, error) {
+	node, err := clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	return []v1.Node{*node}, err
 }
 

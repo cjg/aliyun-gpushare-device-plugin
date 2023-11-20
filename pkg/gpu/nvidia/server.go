@@ -34,6 +34,11 @@ type NvidiaDevicePlugin struct {
 	sync.RWMutex
 }
 
+func (m *NvidiaDevicePlugin) GetPreferredAllocation(ctx context.Context, request *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 // NewNvidiaDevicePlugin returns an initialized NvidiaDevicePlugin
 func NewNvidiaDevicePlugin(mps, healthCheck, queryKubelet bool, client *client.KubeletClient) (*NvidiaDevicePlugin, error) {
 	devs, devNameMap := getDevices()
@@ -46,11 +51,14 @@ func NewNvidiaDevicePlugin(mps, healthCheck, queryKubelet bool, client *client.K
 	log.Infof("Device Map: %v", devNameMap)
 	log.Infof("Device List: %v", devList)
 
-	err := patchGPUCount(len(devList))
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute)
+	defer cancel()
+
+	err := patchGPUCount(ctx, len(devList))
 	if err != nil {
 		return nil, err
 	}
-	disableCGPUIsolation, err := disableCGPUIsolationOrNot()
+	disableCGPUIsolation, err := disableCGPUIsolationOrNot(ctx)
 	if err != nil {
 		return nil, err
 	}

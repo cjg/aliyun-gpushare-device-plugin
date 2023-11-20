@@ -61,12 +61,14 @@ func getDevices() ([]*pluginapi.Device, map[string]uint) {
 		check(err)
 		realDevNames[uuid] = uint(i)
 		// var KiB uint64 = 1024
-		log.Infof("# device Memory: %d", uint(*d.Memory))
+		memoryInfo, err := d.GetMemoryInfo_v2()
+		check(err)
+		log.Infof("# device Memory: %d", uint(memoryInfo.Total))
 		if getGPUMemory() == uint(0) {
-			setGPUMemory(uint(*d.Memory))
+			setGPUMemory(uint(memoryInfo.Total))
 		}
 		for j := uint(0); j < getGPUMemory(); j++ {
-			fakeID := generateFakeDeviceID(d.UUID, j)
+			fakeID := generateFakeDeviceID(uuid, j)
 			if j == 0 {
 				log.Infoln("# Add first device ID: " + fakeID)
 			}
@@ -93,55 +95,59 @@ func deviceExists(devs []*pluginapi.Device, id string) bool {
 }
 
 func watchXIDs(ctx context.Context, devs []*pluginapi.Device, xids chan<- *pluginapi.Device) {
-	eventSet := nvml.NewEventSet()
-	defer nvml.DeleteEventSet(eventSet)
-
-	for _, d := range devs {
-		realDeviceID := extractRealDeviceID(d.ID)
-		err := nvml.RegisterEventForDevice(eventSet, nvml.XidCriticalError, realDeviceID)
-		if err != nil && strings.HasSuffix(err.Error(), "Not Supported") {
-			log.Infof("Warning: %s (%s) is too old to support healthchecking: %s. Marking it unhealthy.", realDeviceID, d.ID, err)
-
-			xids <- d
-			continue
-		}
-
-		if err != nil {
-			log.Fatalf("Fatal error:", err)
-		}
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-
-		e, err := nvml.WaitForEvent(eventSet, 5000)
-		if err != nil && e.Etype != nvml.XidCriticalError {
-			continue
-		}
-
-		// FIXME: formalize the full list and document it.
-		// http://docs.nvidia.com/deploy/xid-errors/index.html#topic_4
-		// Application errors: the GPU should still be healthy
-		if e.Edata == 31 || e.Edata == 43 || e.Edata == 45 {
-			continue
-		}
-
-		if e.UUID == nil || len(*e.UUID) == 0 {
-			// All devices are unhealthy
-			for _, d := range devs {
-				xids <- d
-			}
-			continue
-		}
+	// FIXME: re-implement for new nvml interface
+	/*
+		eventSet, err := nvml.EventSetCreate()
+		check(err)
+		defer eventSet.Free()
 
 		for _, d := range devs {
-			if extractRealDeviceID(d.ID) == *e.UUID {
+			realDeviceID := extractRealDeviceID(d.ID)
+			err := nvml.RegisterEventForDevice(eventSet, nvml.XidCriticalError, realDeviceID)
+			if err != nil && strings.HasSuffix(err.Error(), "Not Supported") {
+				log.Infof("Warning: %s (%s) is too old to support healthchecking: %s. Marking it unhealthy.", realDeviceID, d.ID, err)
+
 				xids <- d
+				continue
+			}
+
+			if err != nil {
+				log.Fatalf("Fatal error:", err)
 			}
 		}
-	}
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			e, err := nvml.WaitForEvent(eventSet, 5000)
+			if err != nil && e.Etype != nvml.XidCriticalError {
+				continue
+			}
+
+			// FIXME: formalize the full list and document it.
+			// http://docs.nvidia.com/deploy/xid-errors/index.html#topic_4
+			// Application errors: the GPU should still be healthy
+			if e.Edata == 31 || e.Edata == 43 || e.Edata == 45 {
+				continue
+			}
+
+			if e.UUID == nil || len(*e.UUID) == 0 {
+				// All devices are unhealthy
+				for _, d := range devs {
+					xids <- d
+				}
+				continue
+			}
+
+			for _, d := range devs {
+				if extractRealDeviceID(d.ID) == *e.UUID {
+					xids <- d
+				}
+			}
+		}
+	*/
 }
